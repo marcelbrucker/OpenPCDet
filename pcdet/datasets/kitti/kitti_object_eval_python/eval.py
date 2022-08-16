@@ -3,7 +3,7 @@ import io as sysio
 import numba
 import numpy as np
 
-from .rotate_iou import rotate_iou_gpu_eval
+from rotate_iou import rotate_iou_gpu_eval
 
 
 @numba.jit
@@ -118,7 +118,7 @@ def bev_box_overlap(boxes, qboxes, criterion=-1):
     return riou
 
 
-@numba.jit(nopython=True, parallel=True)
+@numba.jit(nopython=True)
 def d3_box_overlap_kernel(boxes, qboxes, rinc, criterion=-1):
     # ONLY support overlap in CAMERA, not lider.
     N, K = boxes.shape[0], qboxes.shape[0]
@@ -145,12 +145,13 @@ def d3_box_overlap_kernel(boxes, qboxes, rinc, criterion=-1):
                     rinc[i, j] = inc / ua
                 else:
                     rinc[i, j] = 0.0
+    return rinc
 
 
 def d3_box_overlap(boxes, qboxes, criterion=-1):
     rinc = rotate_iou_gpu_eval(boxes[:, [0, 2, 3, 5, 6]],
                                qboxes[:, [0, 2, 3, 5, 6]], 2)
-    d3_box_overlap_kernel(boxes, qboxes, rinc, criterion)
+    rinc = d3_box_overlap_kernel(boxes, qboxes, rinc, criterion)
     return rinc
 
 
